@@ -4,3 +4,6 @@ scrapper_backup/
 scraped_data/
 output/
 main_scrapper_2.py
+image_analysis_output/
+__pycache__/
+Outputs

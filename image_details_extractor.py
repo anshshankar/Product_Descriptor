@@ -1,4 +1,4 @@
-from mistralai import Mistral
+from openai import OpenAI
 import os
 from pathlib import Path
 from mistralai import ImageURLChunk, TextChunk
@@ -8,7 +8,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-client = Mistral(api_key=os.getenv("MISTRAL_API_KEY"))
+client = OpenAI(
+    api_key=os.getenv("OPENAI_API_KEY"),
+)
 
 def generate_product_description(image_file_paths):
     """
@@ -56,8 +58,8 @@ def generate_product_description(image_file_paths):
     message_content.append({"type": "text", "text": instruction_text})
 
     # Call to the Mistral Pixtral model
-    chat_response = client.chat.complete(
-        model="pixtral-12b-latest",
+    chat_response = client.chat.completions.create(
+        model="gpt-4.1",
         messages=[
             {
                 "role": "user",
@@ -81,15 +83,15 @@ def generate_product_description(image_file_paths):
     return response_dict
 
 # Example usage:
-if __name__ == "__main__":
-    images = [
-        "https://coach.scene7.com/is/image/Coach/cy201_b4bk_a0?$mobileProductV3$",
-        "https://coach.scene7.com/is/image/Coach/cy201_b4bk_a3?$mobileProductV3$",
-        "https://coach.scene7.com/is/image/Coach/en_US-ToroImg_FY25Tabby20Family_a101?$mobileProductV3$",
-        "https://coach.scene7.com/is/image/Coach/cy201_b4bk_a61?$mobileProductV3$",
-        "https://coach.scene7.com/is/image/Coach/cy201_b4bk_a8?$mobileProductV3$",
-        "https://coach.scene7.com/is/image/Coach/cy201_b4bk_a99?$mobileProductV3$",
-        "https://coach.scene7.com/is/image/Coach/cy201_b4bk_a5?$mobileProductV3$",
-    ]
-    description = generate_product_description(images)
-    print(json.dumps(description, indent=4))
+# if __name__ == "__main__":
+#     images = [
+#         "https://coach.scene7.com/is/image/Coach/cy201_b4bk_a0?$mobileProductV3$",
+#         "https://coach.scene7.com/is/image/Coach/cy201_b4bk_a3?$mobileProductV3$",
+#         "https://coach.scene7.com/is/image/Coach/en_US-ToroImg_FY25Tabby20Family_a101?$mobileProductV3$",
+#         "https://coach.scene7.com/is/image/Coach/cy201_b4bk_a61?$mobileProductV3$",
+#         "https://coach.scene7.com/is/image/Coach/cy201_b4bk_a8?$mobileProductV3$",
+#         "https://coach.scene7.com/is/image/Coach/cy201_b4bk_a99?$mobileProductV3$",
+#         "https://coach.scene7.com/is/image/Coach/cy201_b4bk_a5?$mobileProductV3$",
+#     ]
+#     description = generate_product_description(images)
+#     print(json.dumps(description, indent=4))
