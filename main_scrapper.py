@@ -173,13 +173,54 @@ async def scrape_multiple_urls(urls: List[str], output_dir: str) -> List[Dict]:
         results.append(result)
     return results
 
+# def save_to_excel(results: List[Dict], output_file: str):
+#     """
+#     Saves the scraped data to an Excel file, flattening nested structures.
+#     """
+#     # Prepare data for Excel
+#     excel_data = []
+#     for result in results:
+#         row = {
+#             "URL": result.get("url", ""),
+#             "Editor's Notes": result.get("Editor's Notes", ""),
+#             "Images": ", ".join(result.get("Images", [])),
+#             "Overall Rating": result.get("Reviews", {}).get("overall_rating", ""),
+#             "Number of Reviews": result.get("Reviews", {}).get("number_of_reviews", "")
+#         }
+        
+#         # Add product details (e.g., Size, Materials)
+#         for key, value in result.items():
+#             if key not in ["url", "Editor's Notes", "Images", "Reviews"]:
+#                 row[key] = ", ".join(value) if isinstance(value, list) else value
+
+#         # Add individual reviews as separate rows
+#         for review in result.get("Reviews", {}).get("individual_reviews", []):
+#             review_row = row.copy()
+#             review_row.update({
+#                 "Reviewer": review.get("reviewer", ""),
+#                 "Review Date": review.get("date", ""),
+#                 "Review Rating": review.get("rating", ""),
+#                 "Review Title": review.get("title", ""),
+#                 "Review Description": review.get("description", ""),
+#                 "Recommend": review.get("recommend", ""),
+#                 "Thumbs Up": review.get("thumbs_up", 0),
+#                 "Thumbs Down": review.get("thumbs_down", 0)
+#             })
+#             excel_data.append(review_row)
+
+#     # Create DataFrame and save to Excel
+#     df = pd.DataFrame(excel_data)
+#     df.to_excel(output_file, index=False)
+#     print(f"Data saved to {output_file}")
+
 def save_to_excel(results: List[Dict], output_file: str):
     """
-    Saves the scraped data to an Excel file, flattening nested structures.
+    Saves the scraped data to an Excel file, flattening nested structures
+    and storing all individual reviews in one column (one row per product).
     """
-    # Prepare data for Excel
     excel_data = []
     for result in results:
+        # Base fields for this product
         row = {
             "URL": result.get("url", ""),
             "Editor's Notes": result.get("Editor's Notes", ""),
@@ -187,26 +228,39 @@ def save_to_excel(results: List[Dict], output_file: str):
             "Overall Rating": result.get("Reviews", {}).get("overall_rating", ""),
             "Number of Reviews": result.get("Reviews", {}).get("number_of_reviews", "")
         }
-        
-        # Add product details (e.g., Size, Materials)
+
+        # Add other product-specific keys (e.g., Size, Materials, etc.)
         for key, value in result.items():
             if key not in ["url", "Editor's Notes", "Images", "Reviews"]:
                 row[key] = ", ".join(value) if isinstance(value, list) else value
 
-        # Add individual reviews as separate rows
-        for review in result.get("Reviews", {}).get("individual_reviews", []):
-            review_row = row.copy()
-            review_row.update({
-                "Reviewer": review.get("reviewer", ""),
-                "Review Date": review.get("date", ""),
-                "Review Rating": review.get("rating", ""),
-                "Review Title": review.get("title", ""),
-                "Review Description": review.get("description", ""),
-                "Recommend": review.get("recommend", ""),
-                "Thumbs Up": review.get("thumbs_up", 0),
-                "Thumbs Down": review.get("thumbs_down", 0)
-            })
-            excel_data.append(review_row)
+        # Aggregate all individual reviews into one string
+        individual_reviews = result.get("Reviews", {}).get("individual_reviews", [])
+        review_strings = []
+        for review in individual_reviews:
+            # Customize this formatting as needed
+            reviewer = review.get("reviewer", "")
+            date = review.get("date", "")
+            rating = review.get("rating", "")
+            title = review.get("title", "")
+            description = review.get("description", "")
+            recommend = review.get("recommend", "")
+            thumbs_up = review.get("thumbs_up", 0)
+            thumbs_down = review.get("thumbs_down", 0)
+
+            # Example: combine fields into a single-line summary for each review
+            single_review = (
+                f"{reviewer} ({date}) rated {rating}:\n"
+                f"Title: {title}\n"
+                f"Description: {description}\n"
+                f"Recommend: {recommend}, Thumbs Up: {thumbs_up}, Thumbs Down: {thumbs_down}"
+            )
+            review_strings.append(single_review)
+
+        # Join all review summaries with a blank line between them
+        row["All Reviews"] = "\n\n".join(review_strings)
+
+        excel_data.append(row)
 
     # Create DataFrame and save to Excel
     df = pd.DataFrame(excel_data)

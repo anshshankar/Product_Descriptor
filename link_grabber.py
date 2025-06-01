@@ -16,7 +16,7 @@ async def scrape_product_links(url: str) -> list:
 
         # Scroll incrementally to avoid footer
         scroll_count = 0
-        max_scrolls = 50
+        max_scrolls = 100
         last_count = 0
         same_count = 0
         scroll_step = 800  # Pixels to scroll each time

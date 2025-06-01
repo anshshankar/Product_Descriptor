@@ -72,7 +72,7 @@ def generate_product_description(image_file_paths):
     response_dict = json.loads(chat_response.choices[0].message.content)
 
     # Persist the result to a file
-    output_path = Path("output")
+    output_path = Path("image_analysis_output")
     output_path.mkdir(exist_ok=True)
     output_file = output_path / "product_description.json"
     with open(output_file, "w") as json_file:
