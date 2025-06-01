@@ -73,7 +73,7 @@ def main():
         data = json.load(f)
 
     # 2. Iterate over each product in the JSON list
-    for item in data[:10]:
+    for item in data:
         print(f"Processing: {item['url']}")
         images = item.get("Images", [])
         # Generate product description from images
