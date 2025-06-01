@@ -77,7 +77,11 @@ def main():
         print(f"Processing: {item['url']}")
         images = item.get("Images", [])
         # Generate product description from images
-        product_description = generate_product_description(images)
+        if images != []:
+            product_description = generate_product_description(images)
+        else:
+            product_description = {}
+
 
         # Generate luxury tagline using the description and the full JSON object
         luxury_tagline = generate_luxury_tagline_from_json(product_description, item)

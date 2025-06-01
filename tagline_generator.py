@@ -29,6 +29,8 @@ def generate_luxury_tagline_from_json(product_description_image, product_attribu
     for key, value in product_attributes.items():
         # Convert value to a nicely formatted JSON string (properly handle nested lists/dicts)
         # We indent nested objects by two spaces for readability
+        if key in ["Editor's Notes","Images","url"]:
+            continue
         pretty_value = json.dumps(value, indent=2, ensure_ascii=False)
         # Prepend each line of the value with two spaces so it's clear it belongs under the key
         indented_value = "\n".join([f"  {line}" for line in pretty_value.splitlines()])
