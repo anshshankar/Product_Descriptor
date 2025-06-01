@@ -1,0 +1,6 @@
+venv/
+.env
+scrapper_backup/
+scraped_data/
+output/
+main_scrapper_2.py
