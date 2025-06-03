@@ -1,7 +1,6 @@
 from openai import OpenAI
 import os
 from pathlib import Path
-from mistralai import ImageURLChunk, TextChunk
 import json
 import base64
 from dotenv import load_dotenv

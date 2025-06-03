@@ -161,17 +161,40 @@ async def scrape_and_extract_details(url: str, output_dir: str) -> Dict:
         }
 
         return product_details
-
+    
 async def scrape_multiple_urls(urls: List[str], output_dir: str) -> List[Dict]:
     """
-    Scrapes multiple URLs and returns a list of extracted product details.
+    Scrapes multiple URLs concurrently (up to 10 at a time) and returns a list of extracted product details.
+    If any URL fails during processing, it will be skipped.
     """
-    results = []
-    for url in urls:
-        print(f"Scraping {url}...")
-        result = await scrape_and_extract_details(url, output_dir)
-        results.append(result)
-    return results
+    semaphore = asyncio.Semaphore(10)
+
+    async def _scrape_with_limit(url: str) -> Dict:
+        async with semaphore:
+            try:
+                return await scrape_and_extract_details(url, output_dir)
+            except Exception as e:
+                print(f"Error scraping {url}: {e}")
+                # On error, return None so we can filter it out later
+                return None
+
+    # Schedule all scraping tasks
+    tasks = [asyncio.create_task(_scrape_with_limit(url)) for url in urls]
+    raw_results = await asyncio.gather(*tasks)
+
+    # Filter out any None results (URLs that failed)
+    return [result for result in raw_results if result is not None]
+
+# async def scrape_multiple_urls(urls: List[str], output_dir: str) -> List[Dict]:
+#     """
+#     Scrapes multiple URLs and returns a list of extracted product details.
+#     """
+#     results = []
+#     for url in urls:
+#         print(f"Scraping {url}...")
+#         result = await scrape_and_extract_details(url, output_dir)
+#         results.append(result)
+#     return results
 
 # def save_to_excel(results: List[Dict], output_file: str):
 #     """
