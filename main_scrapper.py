@@ -41,9 +41,21 @@ async def scrape_and_extract_details(url: str, output_dir: str) -> Dict:
 
             await browser.close()
 
-            # Extract product details
             details_container = soup.find('div', id='description2')
-            product_details = {"url": url}  # Include URL in output
+            product_details = {"url": url}
+
+            product_name_tag = soup.find('h3', {'data-qa': 'pdp_txt_pdt_title'})
+            if product_name_tag:
+                product_details['product_name'] = product_name_tag.get_text(strip=True)
+            else:
+                product_details['product_name'] = None  # or use "N/A"
+
+            # Extract product price
+            price_tag = soup.find('span', {'data-qa': 'cm_txt_pdt_price'})
+            if price_tag:
+                product_details['price'] = price_tag.get_text(strip=True)
+            else:
+                product_details['price'] = None  # or use "N/A"
 
             if not details_container:
                 print(f"Product details section not found for {url}")
@@ -307,7 +319,7 @@ if __name__ == "__main__":
     target_urls = asyncio.run(scrape_product_links(target_url))
     
     print(f"\nFound {len(target_urls)} unique product links:")
-    # target_urls = target_urls[:10]
+    target_urls = target_urls[:10]
     
     output_dir = "scraped_data"
     excel_output = "product_details.xlsx"
