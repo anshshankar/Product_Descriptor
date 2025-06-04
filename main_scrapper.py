@@ -13,177 +13,174 @@ async def scrape_and_extract_details(url: str, output_dir: str) -> Dict:
     Launches a headless browser, navigates to the given URL, waits for 5 seconds,
     saves the HTML content to a file, and extracts product details, images, and reviews using BeautifulSoup.
     """
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=False)
-        page = await browser.new_page()
-        await page.goto(url)
+    try:
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=False)
+            page = await browser.new_page()
+            await page.goto(url)
 
-        # Wait for the page to fully load
-        await asyncio.sleep(9)
+            # Wait for the page to fully load
+            await asyncio.sleep(9)
 
-        # Get the HTML content
-        content = await page.content()
+            # Get the HTML content
+            content = await page.content()
 
-        # Generate unique filename for HTML
-        html_filename = f"scraped_page_{uuid.uuid4().hex}.html"
-        html_filepath = os.path.join(output_dir, html_filename)
-        
-        # Ensure output directory exists
-        os.makedirs(output_dir, exist_ok=True)
+            # Generate unique filename for HTML
+            html_filename = f"scraped_page_{uuid.uuid4().hex}.html"
+            html_filepath = os.path.join(output_dir, html_filename)
+            
+            # Ensure output directory exists
+            os.makedirs(output_dir, exist_ok=True)
 
-        # Save to file
-        with open(html_filepath, "w", encoding="utf-8") as f:
-            f.write(content)
+            # Save to file
+            with open(html_filepath, "w", encoding="utf-8") as f:
+                f.write(content)
 
-        # Parse with BeautifulSoup
-        soup = BeautifulSoup(content, "html.parser")
+            # Parse with BeautifulSoup
+            soup = BeautifulSoup(content, "html.parser")
 
-        await browser.close()
+            await browser.close()
 
-        # Extract product details
-        details_container = soup.find('div', id='description2')
-        product_details = {"url": url}  # Include URL in output
+            # Extract product details
+            details_container = soup.find('div', id='description2')
+            product_details = {"url": url}  # Include URL in output
 
-        if not details_container:
-            print(f"Product details section not found for {url}")
-            return product_details
+            if not details_container:
+                print(f"Product details section not found for {url}")
+                return product_details
 
-        # Extract detail sections (e.g., Size, Materials)
-        for section in details_container.find_all('div', class_='product-props__details'):
-            header_tag = section.find('h2')
-            if not header_tag:
-                continue
-            header = header_tag.get_text(strip=True)
-            items = [li.get_text(strip=True) for li in section.find_all('li')]
-            product_details[header] = items
+            # Extract detail sections (e.g., Size, Materials)
+            for section in details_container.find_all('div', class_='product-props__details'):
+                header_tag = section.find('h2')
+                if not header_tag:
+                    continue
+                header = header_tag.get_text(strip=True)
+                items = [li.get_text(strip=True) for li in section.find_all('li')]
+                product_details[header] = items
 
-        # Extract Editor's Notes
-        editor_section = details_container.find_next_sibling('div', class_='css-xc41pm')
-        if editor_section:
-            notes_div = editor_section.find('div', class_='css-1r44snt')
-            if notes_div:
-                notes = notes_div.get_text(strip=True)
-                product_details["Editor's Notes"] = notes
+            # Extract Editor's Notes
+            editor_section = details_container.find_next_sibling('div', class_='css-xc41pm')
+            if editor_section:
+                notes_div = editor_section.find('div', class_='css-1r44snt')
+                if notes_div:
+                    notes = notes_div.get_text(strip=True)
+                    product_details["Editor's Notes"] = notes
 
-        # Extract image URLs from splide container
-        splide_container = soup.find('div', class_='css-8h57m5')
-        if splide_container:
-            img_tags = splide_container.find_all('img', class_='chakra-image css-boil6')
-            image_urls = list(set(img.get('src') for img in img_tags if img.get('src')))
-            product_details["Images"] = image_urls
-        else:
-            print(f"Splide image container not found for {url}")
-            product_details["Images"] = []
+            # Extract image URLs from splide container
+            splide_container = soup.find('div', class_='css-8h57m5')
+            if splide_container:
+                img_tags = splide_container.find_all('img', class_='chakra-image css-boil6')
+                image_urls = list(set(img.get('src') for img in img_tags if img.get('src')))
+                product_details["Images"] = image_urls
+            else:
+                print(f"Splide image container not found for {url}")
+                product_details["Images"] = []
 
-        # Extract overall reviews
-        overall_reviews_div = soup.find('div', class_='css-1vjihxg')
-        if overall_reviews_div:
-            rating_div = overall_reviews_div.find('div', class_='css-vnjdh5')
-            overall_rating = rating_div.get_text(strip=True).split()[0] if rating_div else None
+            # Extract overall reviews
+            overall_reviews_div = soup.find('div', class_='css-1vjihxg')
+            if overall_reviews_div:
+                rating_div = overall_reviews_div.find('div', class_='css-vnjdh5')
+                overall_rating = rating_div.get_text(strip=True).split()[0] if rating_div else None
 
-            reviews_count_div = overall_reviews_div.find('div', class_='css-1tx6eu7')
-            number_of_reviews = reviews_count_div.get_text(strip=True).split()[0] if reviews_count_div else None
-        else:
-            overall_rating = None
-            number_of_reviews = None
+                reviews_count_div = overall_reviews_div.find('div', class_='css-1tx6eu7')
+                number_of_reviews = reviews_count_div.get_text(strip=True).split()[0] if reviews_count_div else None
+            else:
+                overall_rating = None
+                number_of_reviews = None
 
-        # Extract individual reviews
-        review_items = soup.find_all('div', class_='review-list-item css-cxd8co')
-        individual_reviews = []
+            # Extract individual reviews
+            review_items = soup.find_all('div', class_='review-list-item css-cxd8co')
+            individual_reviews = []
 
-        for review_item in review_items:
-            # Extract reviewer's name and date
-            user_info_div = review_item.find('div', class_='review-list-item-user-info css-aqx73m')
-            if user_info_div:
-                user_info_text = user_info_div.get_text(strip=True)
-                try:
-                    name, date = user_info_text.split(', ', 1)
-                except ValueError:
-                    name = user_info_text
+            for review_item in review_items:
+                # Extract reviewer's name and date
+                user_info_div = review_item.find('div', class_='review-list-item-user-info css-aqx73m')
+                if user_info_div:
+                    user_info_text = user_info_div.get_text(strip=True)
+                    try:
+                        name, date = user_info_text.split(', ', 1)
+                    except ValueError:
+                        name = user_info_text
+                        date = None
+                else:
+                    name = None
                     date = None
-            else:
-                name = None
-                date = None
 
-            # Extract rating from stars
-            stars_div = review_item.find('div', class_='chakra-stack css-16yi24e')
-            if stars_div:
-                full_stars = stars_div.find_all('svg', {'data-qa': 'cm_icon_pt_rs_filled'})
-                half_stars = stars_div.find_all('svg', {'data-qa': 'cm_icon_pt_rs_half'})
-                rating = len(full_stars) + 0.5 * len(half_stars)
-            else:
-                rating = None
+                # Extract rating from stars
+                stars_div = review_item.find('div', class_='chakra-stack css-16yi24e')
+                if stars_div:
+                    full_stars = stars_div.find_all('svg', {'data-qa': 'cm_icon_pt_rs_filled'})
+                    half_stars = stars_div.find_all('svg', {'data-qa': 'cm_icon_pt_rs_half'})
+                    rating = len(full_stars) + 0.5 * len(half_stars)
+                else:
+                    rating = None
 
-            # Extract review title
-            title_h5 = review_item.find('h5', class_='review-response-details-title css-1hbkifp')
-            title = title_h5.get_text(strip=True) if title_h5 else None
+                # Extract review title
+                title_h5 = review_item.find('h5', class_='review-response-details-title css-1hbkifp')
+                title = title_h5.get_text(strip=True) if title_h5 else None
 
-            # Extract review description
-            desc_div = review_item.find('div', class_='review-response-details-description show-less css-1a6nsdk')
-            description = desc_div.get_text(strip=True) if desc_div else None
+                # Extract review description
+                desc_div = review_item.find('div', class_='review-response-details-description show-less css-1a6nsdk')
+                description = desc_div.get_text(strip=True) if desc_div else None
 
-            # Extract recommendation
-            recommend_div = review_item.find('div', class_='css-1ptaiic')
-            if recommend_div:
-                recommend_text = recommend_div.get_text(strip=True)
-                try:
-                    recommend = recommend_text.split(': ')[1]
-                except IndexError:
+                # Extract recommendation
+                recommend_div = review_item.find('div', class_='css-1ptaiic')
+                if recommend_div:
+                    recommend_text = recommend_div.get_text(strip=True)
+                    try:
+                        recommend = recommend_text.split(': ')[1]
+                    except IndexError:
+                        recommend = None
+                else:
                     recommend = None
-            else:
-                recommend = None
 
-            # Extract helpfulness counts
-            thumbs_up_span = review_item.find('span', {'data-qa': 'rnr_txt_likerevcount'})
-            thumbs_up = int(thumbs_up_span.get_text(strip=True)) if thumbs_up_span else 0
+                # Extract helpfulness counts
+                thumbs_up_span = review_item.find('span', {'data-qa': 'rnr_txt_likerevcount'})
+                thumbs_up = int(thumbs_up_span.get_text(strip=True)) if thumbs_up_span else 0
 
-            thumbs_down_span = review_item.find('span', {'data-qa': 'rnr_txt_dislikerevcount'})
-            thumbs_down = int(thumbs_down_span.get_text(strip=True)) if thumbs_down_span else 0
+                thumbs_down_span = review_item.find('span', {'data-qa': 'rnr_txt_dislikerevcount'})
+                thumbs_down = int(thumbs_down_span.get_text(strip=True)) if thumbs_down_span else 0
 
-            # Compile individual review
-            review = {
-                "reviewer": name,
-                "date": date,
-                "rating": rating,
-                "title": title,
-                "description": description,
-                "recommend": recommend,
-                "thumbs_up": thumbs_up,
-                "thumbs_down": thumbs_down
+                # Compile individual review
+                review = {
+                    "reviewer": name,
+                    "date": date,
+                    "rating": rating,
+                    "title": title,
+                    "description": description,
+                    "recommend": recommend,
+                    "thumbs_up": thumbs_up,
+                    "thumbs_down": thumbs_down
+                }
+                individual_reviews.append(review)
+
+            # Add reviews to product details
+            product_details["Reviews"] = {
+                "overall_rating": overall_rating,
+                "number_of_reviews": number_of_reviews,
+                "individual_reviews": individual_reviews
             }
-            individual_reviews.append(review)
 
-        # Add reviews to product details
-        product_details["Reviews"] = {
-            "overall_rating": overall_rating,
-            "number_of_reviews": number_of_reviews,
-            "individual_reviews": individual_reviews
-        }
-
-        return product_details
+            return product_details
+    except Exception as e:
+        print(f"Error Processing {url}: ",e)
+        return {}
     
 async def scrape_multiple_urls(urls: List[str], output_dir: str) -> List[Dict]:
     """
-    Scrapes multiple URLs concurrently (up to 10 at a time) and returns a list of extracted product details.
-    If any URL fails during processing, it will be skipped.
+    Scrapes multiple URLs and returns a list of extracted product details.
+    If scrape_and_extract_details returns an empty dict ({}), that result is skipped.
     """
-    semaphore = asyncio.Semaphore(10)
-
-    async def _scrape_with_limit(url: str) -> Dict:
-        async with semaphore:
-            try:
-                return await scrape_and_extract_details(url, output_dir)
-            except Exception as e:
-                print(f"Error scraping {url}: {e}")
-                # On error, return None so we can filter it out later
-                return None
-
-    # Schedule all scraping tasks
-    tasks = [asyncio.create_task(_scrape_with_limit(url)) for url in urls]
-    raw_results = await asyncio.gather(*tasks)
-
-    # Filter out any None results (URLs that failed)
-    return [result for result in raw_results if result is not None]
+    results = []
+    for url in urls:
+        print(f"Scraping {url}...")
+        result = await scrape_and_extract_details(url, output_dir)
+        # Only add to results if not an empty dict
+        if result:
+            results.append(result)
+        else:
+            print(f"Skipped {url} because scrape returned empty result.")
+    return results
 
 # async def scrape_multiple_urls(urls: List[str], output_dir: str) -> List[Dict]:
 #     """
