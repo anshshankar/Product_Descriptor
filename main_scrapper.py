@@ -194,56 +194,6 @@ async def scrape_multiple_urls(urls: List[str], output_dir: str) -> List[Dict]:
             print(f"Skipped {url} because scrape returned empty result.")
     return results
 
-# async def scrape_multiple_urls(urls: List[str], output_dir: str) -> List[Dict]:
-#     """
-#     Scrapes multiple URLs and returns a list of extracted product details.
-#     """
-#     results = []
-#     for url in urls:
-#         print(f"Scraping {url}...")
-#         result = await scrape_and_extract_details(url, output_dir)
-#         results.append(result)
-#     return results
-
-# def save_to_excel(results: List[Dict], output_file: str):
-#     """
-#     Saves the scraped data to an Excel file, flattening nested structures.
-#     """
-#     # Prepare data for Excel
-#     excel_data = []
-#     for result in results:
-#         row = {
-#             "URL": result.get("url", ""),
-#             "Editor's Notes": result.get("Editor's Notes", ""),
-#             "Images": ", ".join(result.get("Images", [])),
-#             "Overall Rating": result.get("Reviews", {}).get("overall_rating", ""),
-#             "Number of Reviews": result.get("Reviews", {}).get("number_of_reviews", "")
-#         }
-        
-#         # Add product details (e.g., Size, Materials)
-#         for key, value in result.items():
-#             if key not in ["url", "Editor's Notes", "Images", "Reviews"]:
-#                 row[key] = ", ".join(value) if isinstance(value, list) else value
-
-#         # Add individual reviews as separate rows
-#         for review in result.get("Reviews", {}).get("individual_reviews", []):
-#             review_row = row.copy()
-#             review_row.update({
-#                 "Reviewer": review.get("reviewer", ""),
-#                 "Review Date": review.get("date", ""),
-#                 "Review Rating": review.get("rating", ""),
-#                 "Review Title": review.get("title", ""),
-#                 "Review Description": review.get("description", ""),
-#                 "Recommend": review.get("recommend", ""),
-#                 "Thumbs Up": review.get("thumbs_up", 0),
-#                 "Thumbs Down": review.get("thumbs_down", 0)
-#             })
-#             excel_data.append(review_row)
-
-#     # Create DataFrame and save to Excel
-#     df = pd.DataFrame(excel_data)
-#     df.to_excel(output_file, index=False)
-#     print(f"Data saved to {output_file}")
 
 def save_to_excel(results: List[Dict], output_file: str):
     """
@@ -309,14 +259,14 @@ def save_to_json(results: List[Dict], output_file: str):
 
 if __name__ == "__main__":
     # List of URLs to scrape
-    # target_urls = [
-    #     "https://www.coach.com/products/tabby-shoulder-bag-20/CW917-LHCHK.html?rrec=true",
-    #     "https://www.coach.com/products/tabby-shoulder-bag-20/CY201-B4%2FHA.html?rrec=true",
-    #     "https://www.coach.com/products/soft-empire-carryall-bag-48/CW617-B4MER.html?rrec=true"
-    # ]
+    target_urls = [
+        "https://www.coach.com/products/tabby-shoulder-bag-20/CW917-LHCHK.html?rrec=true",
+        "https://www.coach.com/products/tabby-shoulder-bag-20/CY201-B4%2FHA.html?rrec=true",
+        "https://www.coach.com/products/soft-empire-carryall-bag-48/CW617-B4MER.html?rrec=true"
+    ]
 
-    target_url = "https://www.coach.com/shop/women/view-all"
-    target_urls = asyncio.run(scrape_product_links(target_url))
+    # target_url = "https://www.coach.com/shop/women/view-all"
+    # target_urls = asyncio.run(scrape_product_links(target_url))
     
     print(f"\nFound {len(target_urls)} unique product links:")
     target_urls = target_urls[:10]

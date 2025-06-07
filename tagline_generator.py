@@ -77,7 +77,7 @@ def generate_luxury_tagline_from_json(product_description_image, product_attribu
     # Join all lines into a single prompt string
     full_prompt = "\n".join(prompt_lines)
 
-    print(full_prompt)
+    # print(full_prompt)
 
     # Call the OpenAI API with a low temperature to reduce hallucinations
     response = client.chat.completions.create(
@@ -94,33 +94,33 @@ def generate_luxury_tagline_from_json(product_description_image, product_attribu
     return response.choices[0].message.content.strip()
 
 
-import json
+# import json
 
-def main():
-    with open("product_details.json", "r", encoding="utf-8") as file:
-        data = json.load(file)
+# def main():
+#     with open("product_details.json", "r", encoding="utf-8") as file:
+#         data = json.load(file)
 
-    from image_details_extractor import generate_product_description
-    from analytics_matcher import match_headline_to_keyword
+#     from image_details_extractor import generate_product_description
+#     from analytics_matcher import match_headline_to_keyword
 
-    for i, item in enumerate(data[2:3]):
-        images = item.get("Images", [])
+#     for i, item in enumerate(data[2:3]):
+#         images = item.get("Images", [])
 
-        if images:
-            product_description = generate_product_description(images)
-        else:
-            product_description = {}
+#         if images:
+#             product_description = generate_product_description(images)
+#         else:
+#             product_description = {}
 
-        product_name = item.get("product_name", [])
+#         product_name = item.get("product_name", [])
 
-        if product_name:
-            analytics = match_headline_to_keyword(product_name)
-        else:
-            analytics = {}
+#         if product_name:
+#             analytics = match_headline_to_keyword(product_name)
+#         else:
+#             analytics = {}
 
 
-        luxury_tagline = generate_luxury_tagline_from_json(product_description, item, analytics)
+#         luxury_tagline = generate_luxury_tagline_from_json(product_description, item, analytics)
 
-        print(luxury_tagline)
+#         print(luxury_tagline)
 
-main()
+# main()
