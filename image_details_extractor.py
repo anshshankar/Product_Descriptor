@@ -53,21 +53,26 @@ def generate_product_description(image_file_paths):
         "6. Suggested use-case or styling recommendations.\n"
         "7. Any notable craftsmanship techniques visible.\n"
         "Format the output strictly as JSON with keys matching the above points and no extra commentary."
+        "**Do not use the word 'logo','casual','handbag','modern'**"
     )
     message_content.append({"type": "text", "text": instruction_text})
 
     # Call to the Mistral Pixtral model
-    chat_response = client.chat.completions.create(
-        model="gpt-4.1",
-        messages=[
-            {
-                "role": "user",
-                "content": message_content
-            }
-        ],
-        response_format={"type": "json_object"},
-        temperature=0.2,
-    )
+    try:
+        chat_response = client.chat.completions.create(
+            model="gpt-4.1",
+            messages=[
+                {
+                    "role": "user",
+                    "content": message_content
+                }
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.2,
+        )
+    except Exception as e:
+        print(f"⚠️ Skipped image due to error: {e}")
+        return {}
 
     # Parse and save the JSON response
     response_dict = json.loads(chat_response.choices[0].message.content)

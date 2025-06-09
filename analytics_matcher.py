@@ -36,6 +36,8 @@ def match_headline_to_keyword(headline: str) -> dict:
         or None if no match is found.
     """
     df_keywords = pd.read_excel("Google_Analytics/Analytics_report.xlsx")
+    if not isinstance(headline, str) or not headline.strip():
+        return {}
     headline_lower = headline.strip().lower()
     keywords_list = df_keywords['Keyword'].astype(str).tolist()
     keywords_lower = [k.lower() for k in keywords_list]
