@@ -11,6 +11,7 @@ from docx import Document
 from image_details_extractor import generate_product_description
 from analytics_matcher import match_headline_to_keyword
 import re
+from typing import List, Iterable
 
 # Load environment variables from .env file
 load_dotenv()
@@ -30,8 +31,8 @@ spade_doc = Document("Documents/Kate Spade Rules.docx")
 spade_rules = "\n".join([para.text for para in spade_doc.paragraphs])
 
 # Data File paths
-file1 = 'Documents\POC Product Selection- Coach Outlet.xlsx'
-file2 = 'Documents\POC Product Selection- Kate Spade.xlsx'
+file1 = 'Documents/POC Product Selection- Coach Outlet.xlsx'
+file2 = 'Documents/POC Product Selection- Kate Spade.xlsx'
 
 coach_sheets = pd.read_excel(file1, sheet_name=None)
 spade_sheets = pd.read_excel(file2, sheet_name=None)
@@ -128,7 +129,7 @@ def get_tagline(product_attributes, product_description_image, analytics, compan
             "PVC", "sophisticated", "modern wardrobe", "luxurious", "logo", 
             "logo embellishment", "Saffiano PVC", "the modern woman", "smart", 
             "sophisticated", "fashion-forward individual", "modern wardrobe", "sophistication", 
-            "we", "you", "casual day", "flair", "causal outings", "casual", 
+            "we", "casual day", "flair", "causal outings", "casual", 
             "brighter days", "metal material", "sophistication", "trust us", "day party", 
             "fashion-savvy individual", "elegance", "elegant", "modern fashion", "modern","precision edge painting"
         ]
@@ -225,30 +226,33 @@ def get_tagline(product_attributes, product_description_image, analytics, compan
         ]
 
     prod_old_description = list(set(prod_old_description))
-    def remove_blacklisted_keywords(paragraphs, blacklisted_keywords):
-        cleaned_paragraphs = []
-        
-        for paragraph in paragraphs:
-            if not isinstance(paragraph, str) or not paragraph.strip():
-                continue  # Skip NaN, empty strings, or non-string values
-            
-            cleaned_paragraph = paragraph
-            for keyword in blacklisted_keywords:
-                pattern = r'\b' + re.escape(keyword) + r'\b'
-                cleaned_paragraph = re.sub(pattern, '', cleaned_paragraph, flags=re.IGNORECASE)
-            
-            cleaned_paragraph = ' '.join(cleaned_paragraph.split())
-            cleaned_paragraphs.append(cleaned_paragraph)
-        
-        # Remove duplicates while preserving order
+
+    def remove_blacklisted_keywords(paragraphs: Iterable[str], blacklisted_keywords: Iterable[str]) -> List[str]:
+        pattern = r'\b(' + '|'.join(blacklisted_keywords) + r')\b'
+        regex = re.compile(pattern, re.IGNORECASE)
+
         seen = set()
-        unique_paragraphs = [p for p in cleaned_paragraphs if not (p.lower() in seen or seen.add(p.lower()))]
-        
-        return unique_paragraphs
+        cleaned_paragraphs = []
+        for para in paragraphs:
+            # Skip invalid entries
+            if not isinstance(para, str) or not para.strip():
+                continue
 
+            # Single regex substitution for all keywords
+            cleaned = regex.sub('', para)
+            # Normalize whitespace
+            cleaned = ' '.join(cleaned.split())
+            
+            # Skip duplicates (case-insensitive)
+            cleaned_lower = cleaned.lower()
+            if cleaned_lower not in seen:
+                seen.add(cleaned_lower)
+                cleaned_paragraphs.append(cleaned)
 
-    # Apply the function to prod_old_description
+        return cleaned_paragraphs
+    
     prod_old_description = remove_blacklisted_keywords(prod_old_description, blacklisted_keywords)
+
     prompt = [
     "Instructions:",
     "1. You are given a set of rules. Follow them exactly to generate a new tagline.",
@@ -258,8 +262,10 @@ def get_tagline(product_attributes, product_description_image, analytics, compan
     "5. Do NOT mention pairing dress or attire.",
     "6. Do NOT use general phrases—be product-specific.",
     "7. Maintain a natural, authentic tone.",
-    "8. Strictly avoid all blacklisted words (severe penalty for violations).",
-    "9. Strictly follow the structure and the content of sample given, else you will be heavily penalized.",
+    "8. Historical Artifacts should be mentioned from the sample description only.",
+    "9. Strictly avoid all blacklisted words (severe penalty for violations).",
+    "10. Strictly follow the structure and the content of sample given, else you will be heavily penalized.",
+    "11. Content in tagline about the product should be in third party, and address customer as 'you'. Remember 'you' must be used maximum of once per tagline",
     "**You must follow Instructions and rules at any cost, else you will be heavily penalized.**",
     "####",
     "Rules:",
@@ -268,7 +274,7 @@ def get_tagline(product_attributes, product_description_image, analytics, compan
     ]
 
     if prod_old_description != "":
-        prompt.append("**Strictly follow the structure and the content of sample given below, to generate the new tagline. Keep the structure and content same to the given sample. Do not add Blacklisted words.**")
+        prompt.append("**Strictly adhere to the structure and content of the sample description provided below to generate the new tagline. Ensure the structure and content remain identical to the given sample. Do not include blacklisted words. If historical artifacts are referenced, use only those specified in the sample below.**")
         prompt.append(f"{prod_old_description}")
 
     prompt += [
@@ -308,21 +314,36 @@ def get_tagline(product_attributes, product_description_image, analytics, compan
         prompt.append(f"- {key}:\n{indented_value}")
 
     prompt.extend([
-        f"Before generating the tagline, Please check: Do NOT use these blacklisted words under any circumstances: {blacklisted_keywords}.",
-        "Do not use you, your,etc in tagline."
+        f"Before generating, STRICTLY ENSURE none of the following blacklisted words appear in ANY output.",
+        f"Blacklisted Words (JSON array): {json.dumps(blacklisted_keywords, ensure_ascii=False)}"
+        "Generate 3 taglines:\n",
+        "1. The main editorial tagline.\n",
+        "2. A Gen Z–appealing variation of the editorial tagline.\n",
+        "3. The editorial tagline with an added Gen Z–appealing line at the end.\n",
+        "Do NOT use any blacklisted keywords in any on the taglines.",
+        "Always generate tagline in 4 sentences described.",
     ])
 
     prompt.extend([
-    "Format your response exactly like this (so it’s easy to parse):",
-        "```json",
-        "{",
-        '  "editorial_tagline": "...",',
-        '  "SEO Keyword 1": ["...", "...", "..."],',
-        '  "SEO Keyword 2": ["...", "...", "..."],',
-        '  "SEO Keyword 3": ["...", "...", "..."]',
-        "}",
-        "```"
+    "Format your response exactly like this (so it’s easy to parse):\n",
+    "```json",
+    "{",
+    '  "editorial_tagline": "...",',
+    '  "editorial_tagline_genz_variation": "...",',
+    '  "editorial_tagline_appended_genz_line": "...",',
+    '  "SEO Keyword 1": ["...", "...", "..."],',
+    '  "SEO Keyword 2": ["...", "...", "..."],',
+    '  "SEO Keyword 3": ["...", "...", "..."]',
+    "}",
+    "```",
     ])
+
+    prompt.append("""
+    ####  Final Check
+        1. List every word used in your taglines that appears in the blacklisted array.
+        2. If the list is non-empty, output exactly “ERROR: BLACKLIST VIOLATION” and stop.
+        3. Otherwise, output the taglines in the required JSON format.
+    """)
 
     full_prompt = "\n".join(prompt)
 
@@ -336,55 +357,88 @@ def get_tagline(product_attributes, product_description_image, analytics, compan
     "5. Do NOT mention pairing dress or attire.",
     "6. Do NOT use general phrases—be product-specific.",
     "7. Maintain a natural, authentic tone.",
-    "8. Strictly avoid all blacklisted words (severe penalty for violations).",
-    "9. Strictly follow the structure and the content of sample given, else you will be heavily penalized.",
+    "8. Historical Artifacts should be mentioned from the sample description only.",
+    "9. Strictly avoid all blacklisted words (severe penalty for violations).",
+    "10. Strictly follow the structure and the content of sample given, else you will be heavily penalized.",
+    "11. Content in tagline about the product should be in third party, and address customer as 'you'. Remember 'you' must be used maximum of once per tagline",
     "**You must follow Instructions and rules at any cost, else you will be heavily penalized.**",
+    "####",
+    f"Blacklisted Keywords: {blacklisted_keywords}"
     ]
 
     system_prompts = "\n".join(system_prompts)
 
     # print(full_prompt)
 
-    response = client.chat.completions.create(
-            model="gpt-4.1",
-            messages=[
-                {"role": "system", "content": system_prompts},
-                {"role": "user", "content": full_prompt}
-            ],
-            temperature=0.3,
-            response_format={"type": "json_object"}
-        )
-    
-    res = json.loads(response.choices[0].message.content.strip())
+    try:
 
-    found_blacklisted_keywords = []
-
-    tagline = res["editorial_tagline"]
-    for keyword in blacklisted_keywords:
-        pattern = r'\b' + re.escape(keyword) + r'\b'
-        if re.search(pattern, tagline, re.IGNORECASE):
-            found_blacklisted_keywords.append(keyword)
+        response = client.chat.completions.create(
+                model="gpt-4.1",
+                messages=[
+                    {"role": "system", "content": system_prompts},
+                    {"role": "user", "content": full_prompt}
+                ],
+                temperature=0.3,
+                response_format={"type": "json_object"}
+            )
         
+        res = json.loads(response.choices[0].message.content.strip())
 
-    if found_blacklisted_keywords:
-        print(f"🚨 🚨 🚨 🚨 🚨 🚨 Blacklisted keywords present: {', '.join(set(found_blacklisted_keywords))},")
-        print(tagline)
-    else:
-        print("No blacklisted keywords found.")
+        tagline = ''.join([
+            res["editorial_tagline"],
+            res["editorial_tagline_genz_variation"],
+            res["editorial_tagline_appended_genz_line"]
+        ])
 
-    res["Old Description"] = prod_old_description
-    res["Matched OLD Mega PDP Value"] = matched_mega_values
-    res["Prompt"] = full_prompt
-    res["Match_Type"] = match_type
-    print(res["editorial_tagline"])
+        def count_sentences(text):
+            # This pattern looks for '.', '!', or '?' followed by space or end of string
+            sentences = re.split(r'[.!?](?:\s|$)', text.strip())
+            # Remove empty strings
+            sentences = [s for s in sentences if s.strip()]
+            return len(sentences)
 
-    return res
+        # Check each key
+        for key in ["editorial_tagline", "editorial_tagline_genz_variation", "editorial_tagline_appended_genz_line"]:
+            text = res.get(key, "")
+            count = count_sentences(text)
+            print(f"{key}: {'✅ Has 4 sentences' if count == 4 else f'❌ Has {count} sentence(s)'}")
+        
+        # Create single regex pattern with all keywords
+        pattern = r'\b(?:' + '|'.join(map(re.escape, blacklisted_keywords)) + r')\b'
+        
+        # Find all matches in one go
+        found_keywords = re.findall(pattern, tagline, re.IGNORECASE)
+        
+        if found_keywords:
+            print(f"🚨 Blacklisted keywords present: {', '.join(set(found_keywords))}")
+        else:
+            print("No blacklisted keywords found.")
+    
+
+        res["Old Description"] = prod_old_description
+        res["Matched OLD Mega PDP Value"] = matched_mega_values
+        res["Prompt"] = full_prompt
+        res["Match_Type"] = match_type
+        res['Blacklisted Keywords'] = found_keywords
+        print("#####")
+        print("editorial_tagline")
+        print(res["editorial_tagline"])
+        print("editorial_tagline_genz_variation")
+        print(res["editorial_tagline_genz_variation"])
+        print("editorial_tagline_appended_genz_line")
+        print(res["editorial_tagline_appended_genz_line"])
+        print("#####")
+        return res
+    
+    except Exception as e:
+        print("Error occurued")
+        return {"Luxury Tagline":{}}
 
 def process_usecase(usecase_df, brand):
     data = usecase_df.to_dict(orient='records')
     output_data = []
     
-    for item in data:
+    for item in data[:8]:
         print(f"Processing {item['Item#']}")
         image = item.get("Primary Digital Asset URL", "")
         image2 = item.get("Primary Digital Asset URL", "")  # Note: This might need adjustment if a secondary image column exists
@@ -417,8 +471,8 @@ def process_usecase(usecase_df, brand):
 def main():
     # Define all use cases for Coach and Spade
     coach_usecase1 = coach_sheets["1 New Romance Copy Generation"]
-    coach_usecase2 = coach_sheets["2 New Products Part of MegaPDP\u200b"]
-    coach_usecase3 = coach_sheets["3 Products for SEO Enrichment"]
+    # coach_usecase2 = coach_sheets["2 New Products Part of MegaPDP\u200b"]
+    # coach_usecase3 = coach_sheets["3 Products for SEO Enrichment"]
     
     # spade_usecase1 = spade_sheets["1 New Romance Copy Generation"]
     # spade_usecase2 = spade_sheets["2 New Products Part of MegaPDP\u200b"]
@@ -427,8 +481,8 @@ def main():
     # List of use cases with their respective brands
     usecases = [
         (coach_usecase1, "Coach"),
-        (coach_usecase2, "Coach"),
-        (coach_usecase3, "Coach"),
+        # (coach_usecase2, "Coach"),
+        # (coach_usecase3, "Coach"),
         # (spade_usecase1, "Spade"),
         # (spade_usecase2, "Spade"),
         # (spade_usecase3, "Spade"),
@@ -441,34 +495,30 @@ def main():
         processed_df = process_usecase(usecase_df, brand)
         all_results.append(processed_df)
     
-    # Concatenate all processed DataFrames
     all_results_df = pd.concat(all_results, ignore_index=True)
-    
-    # Save first Excel file with all results in original format
-    all_results_df.to_excel("All_Usecases_Results.xlsx", index=False, engine='xlsxwriter', engine_kwargs={'options': {'strings_to_urls': False}})
-    print("Saved to All_Usecases_Results.xlsx")
-    
+
     # Define columns for the new format Excel file
     selected_columns = [
         "Item#",
         "Web Product Name - en",
         "Mega PDP Group Value",
         "editorial_tagline",
+        "editorial_tagline_genz_variation",
+        "editorial_tagline_appended_genz_line",
         "SEO Keyword 1",
         "SEO Keyword 2",
         "SEO Keyword 3"
     ]
-    
+
     # Create new DataFrame with selected columns
     new_format_df = all_results_df[selected_columns]
-    
-    # Save second Excel file with new format
-    new_format_df.to_excel("All_Results_New_Format.xlsx", index=False, engine='xlsxwriter', engine_kwargs={'options': {'strings_to_urls': False}})
-    print("Saved to All_Results_New_Format.xlsx")
 
-if __name__ == "__main__":
-    main()
+    # Save both dataframes to a single Excel file with two sheets
+    with pd.ExcelWriter("Combined_Spade_Results_1.xlsx", engine='xlsxwriter', engine_kwargs={'options': {'strings_to_urls': False}}) as writer:
+        all_results_df.to_excel(writer, sheet_name="Original Format", index=False)
+        new_format_df.to_excel(writer, sheet_name="Formatted View", index=False)
 
+    print("Saved both formats to Combined_Coach_Results.xlsx")
 main()
 
 

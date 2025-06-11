@@ -48,7 +48,6 @@ def generate_product_description(image_file_paths):
         "1. Product name (if identifiable)\n"
         "2. Aesthetic style, unique elements.\n"
         "3. Color palette and design motifs.\n"
-        "4. Possible brand heritage or historical influences if recognizable.\n"
         "Format the output strictly as JSON with keys matching the above points and no extra commentary.\n"
         "**Do not use the word 'logo','casual','handbag','modern','stiching'**\n"
         "Do not give generic answers/characterstics, only mention, the things that can be seen.\n"
