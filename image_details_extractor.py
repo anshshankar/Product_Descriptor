@@ -52,6 +52,7 @@ def generate_product_description(image_file_paths):
         "**Do not use the word 'logo','casual','handbag','modern','stiching'**\n"
         "Do not give generic answers/characterstics, only mention, the things that can be seen.\n"
         "Do not hallucinate, invent, assume any details, Else you will be heavily penalized."
+        "Do not give product name in the response."
     )
     message_content.append({"type": "text", "text": instruction_text})
 
