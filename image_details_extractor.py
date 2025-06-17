@@ -21,7 +21,7 @@ def generate_product_description(image_file_paths):
 
     # Build the multimodal message content
     message_content = []
-    for idx, image_path in enumerate(image_file_paths, start=1):
+    for idx, image_path in enumerate(image_file_paths[:6], start=1):
         # Detect if the path is a URL (starts with http:// or https://)
         if image_path.startswith("http://") or image_path.startswith("https://"):
             # Directly append the ImageURLChunk for remote URLs

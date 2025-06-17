@@ -9,7 +9,7 @@ pd.set_option('display.max_rows', 100)
 from difflib import SequenceMatcher
 from docx import Document
 from image_details_extractor import generate_product_description
-from analytics_matcher import match_headline_to_keyword
+from OLD.analytics_matcher import match_headline_to_keyword
 import re
 from typing import List, Iterable
 
@@ -441,7 +441,7 @@ def process_usecase(usecase_df, brand):
     data = usecase_df.to_dict(orient='records')
     output_data = []
     
-    for item in data[:10]:
+    for item in data[5:6]:
         print(f"Processing {item['Item#']}")
         image = item.get("Primary Digital Asset URL", "")
         image2 = item.get("Primary Digital Asset URL", "")  # Note: This might need adjustment if a secondary image column exists
@@ -516,7 +516,7 @@ def main():
     new_format_df = all_results_df[selected_columns]
 
     # Save both dataframes to a single Excel file with two sheets
-    with pd.ExcelWriter("Combined_Coach_Results_1.xlsx", engine='xlsxwriter', engine_kwargs={'options': {'strings_to_urls': False}}) as writer:
+    with pd.ExcelWriter("Combined_Coach_Results_2.xlsx", engine='xlsxwriter', engine_kwargs={'options': {'strings_to_urls': False}}) as writer:
         all_results_df.to_excel(writer, sheet_name="Original Format", index=False)
         new_format_df.to_excel(writer, sheet_name="Formatted View", index=False)
 

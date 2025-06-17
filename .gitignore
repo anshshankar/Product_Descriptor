@@ -9,3 +9,6 @@ __pycache__/
 Outputs
 api_outputs/
 api_uploads/
+New_Results/
+Outputs/
+*.xlsx

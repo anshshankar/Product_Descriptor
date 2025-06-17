@@ -9,7 +9,7 @@ pd.set_option('display.max_rows', 100)
 from difflib import SequenceMatcher
 from docx import Document
 from image_details_extractor import generate_product_description
-from analytics_matcher import match_headline_to_keyword
+from OLD.analytics_matcher import match_headline_to_keyword
 import re
 from typing import List, Iterable
 
